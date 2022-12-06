@@ -131,11 +131,12 @@ int process_arglist(int count, char **arglist) {
             else
                 arglist[--count] = NULL; // Omit the & at the end of arglist
 
-            if (dup2(fd, STDOUT_FILENO) == -1 || close(fd) == -1) {
-                ERROR_PRINT_EXIT();
-            } // If dup2 was successful no need of the duplicated fd anymore
-
-            arglist[count - 2] = NULL; // command end
+            if (commType == redirect) {
+                if (dup2(fd, STDOUT_FILENO) == -1 || close(fd) == -1) {
+                    ERROR_PRINT_EXIT();
+                } // If dup2 was successful no need of the duplicated fd anymore
+                arglist[count - 2] = NULL; // command end
+            }
             execvp(arglist[0], arglist);
             ERROR_PRINT_EXIT(); // Stay on this code == execvp error
         } else { // Parent
