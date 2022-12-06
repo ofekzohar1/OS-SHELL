@@ -116,7 +116,7 @@ int process_arglist(int count, char **arglist) {
 
     if (commType == redirect) { // Open redirect file or create if non exist
         if ((fd = open(arglist[count - 1], O_RDWR | O_CREAT | O_TRUNC, S_IRWXU)) == -1) {
-            ERROR_PRINT_EXIT();
+            ERROR_PRINT_RET_ZERO();
         }
     }
     if (commType == piping) {
