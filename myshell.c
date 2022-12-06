@@ -57,7 +57,7 @@ int pipeProcess(int count, char **arglist, int pipeSepIndex) {
             close(pipefd[1]) == -1) {
             ERROR_PRINT_EXIT();
         } // stdout to pipe write, release read side and the duplicated write descriptor
-        arglist[pipeSepIndex] = NULL;
+        arglist[pipeSepIndex] = NULL; // 1st command end
         execvp(arglist[0], arglist);
         ERROR_PRINT_EXIT(); // Stay on this code == execvp error
     } else { // Parent
@@ -73,7 +73,7 @@ int pipeProcess(int count, char **arglist, int pipeSepIndex) {
                 ERROR_PRINT_EXIT();
             } // stdin to pipe read, release wrtie side and the duplicated read descriptor
 
-            arglist = arglist + pipeSepIndex + 1;
+            arglist = arglist + pipeSepIndex + 1; // Second command
             execvp(arglist[0], arglist);
             ERROR_PRINT_EXIT(); // Stay on this code == execvp error
         } else { // Parent continue
@@ -124,6 +124,7 @@ int process_arglist(int count, char **arglist) {
                     ERROR_PRINT_EXIT();
                 }
                 // If dup2 was successful no need of the duplicated fd anymore
+                arglist[count-2] = NULL; // command end
             }
             execvp(arglist[0], arglist);
             ERROR_PRINT_EXIT(); // Stay on this code == execvp error
