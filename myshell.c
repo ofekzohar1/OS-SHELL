@@ -144,7 +144,7 @@ int process_arglist(int count, char **arglist) {
                     ERROR_PRINT_RET_ZERO();
                 }
             }
-            if (close(fd) == -1) { // Close redirect descriptor
+            if (commType == redirect && close(fd) == -1) { // Close redirect descriptor
                 ERROR_PRINT_RET_ZERO();
             }
         }
