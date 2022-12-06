@@ -117,7 +117,7 @@ int process_arglist(int count, char **arglist) {
             if (commType != bg)
                 sigaction(SIGINT, &sigintDflHdl, 0); // SIGINT to default handler
             if (commType == redirect) {
-                int fd = open(arglist[count - 1], O_RDWR | O_CREAT | O_TRUNC);
+                int fd = open(arglist[count - 1], O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
                 if (fd == -1 || dup2(fd, STDOUT_FILENO) == -1 || close(fd) == -1) {
                     ERROR_PRINT_EXIT();
                 }
