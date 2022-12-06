@@ -116,6 +116,9 @@ int process_arglist(int count, char **arglist) {
         } else if(!pid) { // Son
             if (commType != bg)
                 sigaction(SIGINT, &sigintDflHdl, 0); // SIGINT to default handler
+            else
+                arglist[--count] = NULL; // Omit the & at the end of arglist
+
             if (commType == redirect) {
                 int fd = open(arglist[count - 1], O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
                 if (fd == -1 || dup2(fd, STDOUT_FILENO) == -1 || close(fd) == -1) {
