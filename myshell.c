@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,42 +9,48 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 
-//
+/* MACROS */
 #define ERROR_PRINT_EXIT() perror(strerror(errno)); exit(EXIT_FAILURE)
 #define ERROR_PRINT_RET_ZERO() perror(strerror(errno)); return 0
 #define BG_SYM "&"
 #define REDIRECT_SYM ">"
 #define PIPE_SYM "|"
 
-const struct sigaction sigintIgnHdl = {.sa_handler = SIG_IGN, .sa_flags = SA_RESTART};
-const struct sigaction sigintDflHdl = {.sa_handler = SIG_DFL, .sa_flags = SA_RESTART};
+/* Constant handlers */
+const struct sigaction sigintIgnHdl = {.sa_handler = SIG_IGN, .sa_flags = SA_RESTART}; // Ignore
+const struct sigaction sigintDflHdl = {.sa_handler = SIG_DFL, .sa_flags = SA_RESTART}; // Default
 
-enum { // Regular command is 0, background 1, piping 2, redirect 3
+enum { // Enum for command type: regular/background/piping/redirect
     reg, bg, piping, redirect
 } typedef COMM_TYPE;
 
+/* Help Functions */
+
+// Parse command type from the current arglist.
+// If pipe command: save the separator index inside the given int pointer.
 COMM_TYPE getCommType(int count, char **arglist, int *pipeSepIndex) {
     COMM_TYPE commType = reg;
     if (strcmp(arglist[count - 1], BG_SYM) == 0) // Lats word is &
         commType = bg;
-    else if (count > 3 && strcmp(arglist[count - 2], REDIRECT_SYM) == 0)
+    else if (count > 2 && strcmp(arglist[count - 2], REDIRECT_SYM) == 0)
         commType = redirect;
     else {
-        for (int i = 1; i < count; i++) {
+        for (int i = 1; i < count; i++) { // Search for pipe symbol
             if (strcmp(arglist[i], PIPE_SYM) == 0) {
-                *pipeSepIndex = i;
+                *pipeSepIndex = i; // Save separator's index
                 commType = piping;
+                break;
             }
         }
     }
     return commType;
 }
 
-int pipeProcess(int count, char **arglist, int pipeSepIndex) {
+// Run 2 piped process
+int pipeProcess(char **arglist, int pipeSepIndex) {
     int pipefd[2], status;
     if (pipe(pipefd) == -1) { // pipe failed
-        perror(strerror(errno));
-        return 0;
+        ERROR_PRINT_RET_ZERO();
     }
 
     pid_t pid1 = fork();
@@ -57,7 +64,8 @@ int pipeProcess(int count, char **arglist, int pipeSepIndex) {
             close(pipefd[1]) == -1) {
             ERROR_PRINT_EXIT();
         } // stdout to pipe write, release read side and the duplicated write descriptor
-        arglist[pipeSepIndex] = NULL;
+
+        arglist[pipeSepIndex] = NULL; // 1st command end
         execvp(arglist[0], arglist);
         ERROR_PRINT_EXIT(); // Stay on this code == execvp error
     } else { // Parent
@@ -71,9 +79,9 @@ int pipeProcess(int count, char **arglist, int pipeSepIndex) {
             if (close(pipefd[1]) == -1 || dup2(pipefd[0], STDIN_FILENO) == -1 ||
                 close(pipefd[0]) == -1) {
                 ERROR_PRINT_EXIT();
-            } // stdin to pipe read, release wrtie side and the duplicated read descriptor
+            } // stdin to pipe read, release write side and the duplicated read descriptor
 
-            arglist = arglist + pipeSepIndex + 1;
+            arglist += pipeSepIndex + 1; // Second command pointer
             execvp(arglist[0], arglist);
             ERROR_PRINT_EXIT(); // Stay on this code == execvp error
         } else { // Parent continue
@@ -88,10 +96,10 @@ int pipeProcess(int count, char **arglist, int pipeSepIndex) {
     return 1; // Success
 }
 
-//
+/* Declared in shell.c functions */
 
 int prepare(void) {
-    // ERAN'S TRICK
+    // ERAN'S TRICK & SIGINT to ignore for the shell process
     if (signal(SIGCHLD, SIG_IGN) == SIG_ERR || sigaction(SIGINT, &sigintIgnHdl, 0) == -1) {
         perror(strerror(errno));
         return 1;
@@ -100,43 +108,49 @@ int prepare(void) {
 }
 
 int process_arglist(int count, char **arglist) {
-    int pipeSepIndex = -1; // pipe seperator index
+    int pipeSepIndex = -1; // pipe separator index
     // Get command type: regular, background, pipe, redirect
     COMM_TYPE commType = getCommType(count, arglist, &pipeSepIndex);
     pid_t pid;
-    int status;
+    int status, fd;
 
-    if (commType == piping){
-        return pipeProcess(count, arglist, pipeSepIndex);
+    if (commType == redirect) { // Open redirect file or create if non exist
+        if ((fd = open(arglist[count - 1], O_RDWR | O_CREAT | O_TRUNC, S_IRWXU)) == -1) {
+            ERROR_PRINT_EXIT();
+        }
+    }
+    if (commType == piping) {
+        return pipeProcess(arglist, pipeSepIndex);
     } else {
         pid = fork();
         if (pid == -1) { // fork error
             ERROR_PRINT_RET_ZERO();
-        } else if(!pid) { // Son
+        } else if (!pid) { // Son
             if (commType != bg)
                 sigaction(SIGINT, &sigintDflHdl, 0); // SIGINT to default handler
             else
                 arglist[--count] = NULL; // Omit the & at the end of arglist
 
-            if (commType == redirect) {
-                int fd = open(arglist[count - 1], O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
-                if (fd == -1 || dup2(fd, STDOUT_FILENO) == -1 || close(fd) == -1) {
-                    ERROR_PRINT_EXIT();
-                }
-                // If dup2 was successful no need of the duplicated fd anymore
-            }
+            if (dup2(fd, STDOUT_FILENO) == -1 || close(fd) == -1) {
+                ERROR_PRINT_EXIT();
+            } // If dup2 was successful no need of the duplicated fd anymore
+
+            arglist[count - 2] = NULL; // command end
             execvp(arglist[0], arglist);
             ERROR_PRINT_EXIT(); // Stay on this code == execvp error
         } else { // Parent
-            if(commType != bg) { // For background wait no needed
+            if (commType != bg) { // For background wait no needed
                 if (waitpid(pid, &status, 0) == -1 && errno != ECHILD && errno != EINTR) {
                     ERROR_PRINT_RET_ZERO();
                 }
             }
+            if (close(fd) == -1) { // Close redirect descriptor
+                ERROR_PRINT_RET_ZERO();
+            }
         }
     }
 
-    return 1;
+    return 1; // Success
 }
 
 int finalize(void) {
