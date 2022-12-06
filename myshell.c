@@ -9,14 +9,14 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 
-/* MACROS */
+/*********** MACROS ***********/
 #define ERROR_PRINT_EXIT() perror(strerror(errno)); exit(EXIT_FAILURE)
 #define ERROR_PRINT_RET_ZERO() perror(strerror(errno)); return 0
 #define BG_SYM "&"
 #define REDIRECT_SYM ">"
 #define PIPE_SYM "|"
 
-/* Constant handlers */
+/*********** Constant handlers ***********/
 const struct sigaction sigintIgnHdl = {.sa_handler = SIG_IGN, .sa_flags = SA_RESTART}; // Ignore
 const struct sigaction sigintDflHdl = {.sa_handler = SIG_DFL, .sa_flags = SA_RESTART}; // Default
 
@@ -24,7 +24,7 @@ enum { // Enum for command type: regular/background/piping/redirect
     reg, bg, piping, redirect
 } typedef COMM_TYPE;
 
-/* Help Functions */
+/******** Help Functions ***********/
 
 // Parse command type from the current arglist.
 // If pipe command: save the separator index inside the given int pointer.
@@ -96,7 +96,7 @@ int pipeProcess(char **arglist, int pipeSepIndex) {
     return 1; // Success
 }
 
-/* Declared in shell.c functions */
+/*********** Declared in shell.c functions ***********/
 
 int prepare(void) {
     // ERAN'S TRICK & SIGINT to ignore for the shell process
