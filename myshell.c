@@ -57,7 +57,6 @@ int pipeProcess(int count, char **arglist, int pipeSepIndex) {
             close(pipefd[1]) == -1) {
             ERROR_PRINT_EXIT();
         } // stdout to pipe write, release read side and the duplicated write descriptor
-
         arglist[pipeSepIndex] = NULL;
         execvp(arglist[0], arglist);
         ERROR_PRINT_EXIT(); // Stay on this code == execvp error
@@ -74,8 +73,8 @@ int pipeProcess(int count, char **arglist, int pipeSepIndex) {
                 ERROR_PRINT_EXIT();
             } // stdin to pipe read, release wrtie side and the duplicated read descriptor
 
-            arglist[pipeSepIndex] = arglist[0];
-            execvp(arglist[0], arglist + pipeSepIndex);
+            arglist = arglist + pipeSepIndex + 1;
+            execvp(arglist[0], arglist);
             ERROR_PRINT_EXIT(); // Stay on this code == execvp error
         } else { // Parent continue
             close(pipefd[0]); // Release descriptors for parent
