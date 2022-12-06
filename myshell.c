@@ -112,7 +112,7 @@ int process_arglist(int count, char **arglist) {
     // Get command type: regular, background, pipe, redirect
     COMM_TYPE commType = getCommType(count, arglist, &pipeSepIndex);
     pid_t pid;
-    int status, fd;
+    int status, fd = -1;
 
     if (commType == redirect) { // Open redirect file or create if non exist
         if ((fd = open(arglist[count - 1], O_RDWR | O_CREAT | O_TRUNC, S_IRWXU)) == -1) {
