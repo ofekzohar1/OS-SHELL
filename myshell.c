@@ -13,7 +13,7 @@
 #define ERROR_PRINT_RET_ZERO() perror(strerror(errno)); return 0
 #define BG_SYM "&"
 #define REDIRECT_SYM ">"
-#define PIPE_SYM ">"
+#define PIPE_SYM "|"
 
 const struct sigaction sigintIgnHdl = {.sa_handler = SIG_IGN, .sa_flags = SA_RESTART};
 const struct sigaction sigintDflHdl = {.sa_handler = SIG_DFL, .sa_flags = SA_RESTART};
